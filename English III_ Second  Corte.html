@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Secure Quiz • Bank 80 • 1 Hour</title>
+<style>
+:root {
+  --green:#40B070; --orange:#F09010; --bg1:#0b1220; --bg2:#050814;
+  --card:rgba(255,255,255,.07); --border:rgba(255,255,255,.12);
+  --text:#e5e7eb; --muted:#cbd5e1;
+}
+html,body{height:100%;margin:0;overflow:hidden;background:
+  radial-gradient(1200px 600px at 20% 10%, rgba(64,176,112,.22), transparent 60%),
+  radial-gradient(1000px 700px at 90% 30%, rgba(240,144,16,.18), transparent 55%),
+  linear-gradient(180deg,var(--bg1),var(--bg2));
+  color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+.wrap{height:100%;display:flex;align-items:center;justify-content:center;padding:14px;box-sizing:border-box;}
+.app{width:min(1200px,100%);}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.badge{background:linear-gradient(90deg, rgba(64,176,112,.35), rgba(240,144,16,.30));border:1px solid var(--border);
+  padding:6px 10px;border-radius:999px;font-weight:900;}
+.pills{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.pill{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;
+  background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.10);font-size:12px;color:var(--muted);}
+.stage{position:relative;height:min(900px,86vh);background:linear-gradient(180deg, rgba(17,24,39,.82), rgba(17,24,39,.55));
+  border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 22px 60px rgba(0,0,0,.45);}
+canvas{position:absolute;inset:0;width:100%;height:100%;}
+.ui{position:absolute;inset:0;padding:16px;box-sizing:border-box;display:none;overflow:auto;}
+.ui.active{display:block;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:42px;}
+.h1{font-size:22px;font-weight:900;margin:0 0 6px 0;}
+.p{margin:0 0 10px 0;color:var(--muted);line-height:1.35;}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 6px;}
+input[type="password"]{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.25);color:var(--text);outline:none;}
+button{cursor:pointer;border:0;border-radius:14px;padding:12px 14px;font-weight:900;}
+.btnPrimary{background:linear-gradient(90deg,var(--green),var(--orange));color:#0b1220;}
+.btnGhost{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--text);}
+button:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.7);}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.opt{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.05);margin:8px 0;}
+.opt.locked{opacity:.80;pointer-events:none;}
+.opt input{margin-top:3px;}
+.opt.correct{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.45);}
+.opt.wrong{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.45);}
+.qTitle{font-weight:900;font-size:16px;margin:0 0 8px;white-space:pre-wrap;}
+.small{font-size:12px;color:var(--muted);white-space:pre-wrap;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media (max-width:780px){ .grid2{grid-template-columns:1fr;} }
+.lockscreen{position:absolute;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box;}
+.lockscreen.active{display:flex;}
+.lockcard{max-width:780px;width:100%;background:rgba(17,24,39,.95);border:1px solid rgba(239,68,68,.35);border-radius:18px;padding:16px;}
+.warn{color:#fecaca;}
+.inlineTimer{margin-top:8px;display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.12);font-size:12px;color:var(--muted);}
+.feedbackRow{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.badgeOk{padding:6px 10px;border-radius:999px;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.45);color:var(--text);font-weight:900;}
+.badgeBad{padding:6px 10px;border-radius:999px;background:rgba(239,68,68,.16);border:1px solid rgba(239,68,68,.45);color:var(--text);font-weight:900;}
+.badgeNeutral{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:var(--muted);font-weight:800;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app">
+    <div class="topbar">
+      <div class="badge">Secure Quiz • Bank 80 • Attempt 25 • 80 Minutes</div>
+      <div class="pills">
+        <div class="pill" id="timerPill">Total time: --:--</div>
+        <div class="pill" id="metaPill">Not started</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <canvas id="cv"></canvas>
+
+      <div class="ui active" id="uiCode">
+        <div class="card">
+          <p class="h1">Access Code</p>
+          <p class="p">Type the code and press <b>Enter</b> (or tap <b>Enter</b>).</p>
+          <label>Code</label>
+          <input id="codeInput" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter access code" />
+          <div class="toolbar"><button class="btnPrimary" id="btnUnlock" type="button">Enter</button></div>
+          <div class="small">Bank: 80 • Attempt: 25 random • Global time: 80:00</div>
+        </div>
+      </div>
+
+      <div class="ui" id="uiStart">
+        <div class="card">
+          <p class="h1">Instructions</p>
+          <p class="p">
+            • You have <b>80 minutes total</b> for the whole attempt.<br/>
+            • This attempt draws <b>25 random questions</b> from a bank of <b>80</b>.<br/>
+            • Leaving the tab/window locks the quiz immediately. The current question counts as wrong. Re-enter the code to continue and the quiz advances automatically.
+          </p>
+          <div class="toolbar"><button class="btnPrimary" id="btnStart" type="button">Start</button></div>
+        </div>
+      </div>
+
+      <div class="ui" id="uiQuiz">
+        <div class="card">
+          <div class="toolbar" style="justify-content:space-between;">
+            <div class="pill" id="qPill">Q</div>
+            <div class="pill" id="securityPill">Security: OK</div>
+          </div>
+          <div id="qbox" style="margin-top:10px;"></div>
+          <div class="toolbar">
+            <button class="btnPrimary" id="btnConfirm" type="button">Check answers</button>
+            <button class="btnGhost" id="btnNext" type="button">Next question</button>
+          </div>
+          <div class="small">After checking, your answer is locked.</div>
+        </div>
+      </div>
+
+      <div class="ui" id="uiResults">
+        <div class="card">
+          <p class="h1">Results</p>
+          <div class="grid2">
+            <div class="card" style="margin-top:0;background:rgba(240,144,16,.08);border-color:rgba(240,144,16,.24)">
+              <p class="h1" style="font-size:18px;margin:0 0 6px;">Final Grade</p>
+              <p class="p" id="finalGrade" style="font-size:22px;font-weight:900;margin:0;"></p>
+              <p class="small" id="finalMeta"></p>
+            </div>
+            <div class="card" style="margin-top:0;">
+              <p class="h1" style="font-size:16px;margin-bottom:8px;">Security Log</p>
+              <div class="small" id="securityLog">No incidents.</div>
+            </div>
+          </div>
+          <div class="toolbar"><button class="btnPrimary" id="btnRestart" type="button">Restart</button></div>
+        </div>
+      </div>
+
+      <div class="lockscreen" id="lockscreen">
+        <div class="lockcard">
+          <p class="h1 warn">Security Check</p>
+          <p class="p warn" id="lockReason">Re-enter the access code to continue.</p>
+          <label>Access code</label>
+          <input id="resumeCodeInput" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter access code" />
+          <div class="toolbar">
+            <button class="btnPrimary" id="btnResume" type="button">Continue</button>
+            <button class="btnGhost" id="btnRestart2" type="button">Restart</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const DATA = {"access_code":"1991", "sample_size": 25, "total_seconds":4800, "bank": [{"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nAt this school, students wear their ID card every day. It is a school rule.\nStudents ___ wear their ID card every day.", "options": ["should", "have to", "mustn’t", "shouldn’t"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nYour friend has a bad cough and feels sick.\nHe ___ see a doctor soon.", "options": ["should", "mustn’t", "have to", "shouldn’t"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nThere is a sign in the museum: “Do not touch the paintings.”\nVisitors ___ touch the paintings.", "options": ["should", "have to", "mustn’t", "shouldn’t"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nThe bus leaves in five minutes, and there is no later bus.\nWe ___ leave now.", "options": ["should", "have to", "shouldn’t", "mustn’t"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nCarla is talking about her life. She wants to say that visiting Peru is not part of her experience.\nCarla says: “I ___ to Peru.”", "options": ["have never been", "has never been", "never have been", "have never be"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nYou have an exam tomorrow, but you are still watching videos very late at night.\nYou ___ go to bed so late.", "options": ["should", "shouldn’t", "must", "have to"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nAt the airport, passengers show their passport before boarding. It is an official rule.\nPassengers ___ show their passport before boarding.", "options": ["should", "have to", "mustn’t", "shouldn’t"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nDaniel wants to talk about an experience he does not have. Sushi is new for him.\nHe says: “I ___ sushi before.”", "options": ["have never tried", "has never tried", "never have try", "have never try"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nThe teacher is speaking to the class right now and says, “Be quiet.”\nStudents ___ be quiet now.", "options": ["should", "shouldn’t", "must", "have to"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nYour brother has a lot of homework, but he is playing video games.\nHe ___ finish his homework first.", "options": ["should", "mustn’t", "have to", "shouldn’t"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nThere is a sign near the pool: “No running.”\nChildren ___ run near the pool.", "options": ["should", "have to", "should not", "mustn’t"], "answer": 3}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nLaura is describing her travel experiences. She went to Bogotá and Medellín in the past, and now she is speaking in general about her life.\nShe says: “I ___ both Bogotá and Medellín.”", "options": ["have visited", "has visited", "visited", "have visit"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nAt this company, workers arrive before 8:00 a.m. It is company policy.\nWorkers ___ arrive before 8:00 a.m.", "options": ["should", "mustn’t", "have to", "shouldn’t"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nMateo eats a lot of junk food and feels tired every day.\nHe ___ eat more fruit and vegetables.", "options": ["shouldn’t", "should", "mustn’t", "have to"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nJulia wants to ask about her classmate’s life experiences.\nShe asks: “___ you ever traveled by plane?”", "options": ["Did", "Have", "Has", "Do"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nThe doctor tells Rosa, “Do not eat too much sugar.”\nRosa ___ eat too much sugar.", "options": ["should", "have to", "shouldn’t", "must"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nYour ticket says seat 12B, and there is no other option.\nYou ___ sit in seat 12B.", "options": ["should", "have to", "mustn’t", "shouldn’t"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nAndrés has a job interview tomorrow morning.\nHe ___ prepare his answers tonight.", "options": ["should", "shouldn’t", "mustn’t", "have"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nDaniela is talking about her life experiences. She wants to say that meeting a famous person is not part of her experience.\nShe says: “I ___ a famous person.”", "options": ["have never met", "has never met", "never have met", "have never meet"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Multiple Choice", "stem": "Read the situation and choose the best option.**\nThere is a sign in the library: “Use your phone outside.”\nStudents ___ use their phones inside the library.", "options": ["have to", "should", "mustn’t", "should to"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nYour mother looks at your room and says, “Clean it today.”\nYou ___ clean your room today.", "options": ["must", "shouldn’t", "mustn’t", "has"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nAt this school, students bring a notebook to English class. It is required.\nStudents ___ bring a notebook to English class.", "options": ["should", "have to", "mustn’t", "has to"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nKevin feels sick after eating too much fast food.\nHe ___ eat so much junk food.", "options": ["should", "shouldn’t", "must", "have to"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nPaola is talking about her experiences. Camping is not part of her life.\nPaola says: “I ___ never ___ camping.”", "options": ["has / gone", "have / gone", "have / go", "has / go"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nThe sign says: “Do not enter.”\nPeople ___ enter this room.", "options": ["should", "have to", "mustn’t", "should to"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nYou have a test tomorrow and you feel unprepared.\nYou ___ study tonight.", "options": ["should", "mustn’t", "shouldn’t", "has to"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nAt the doctor’s office, patients wait for their turn. It is the rule there.\nPatients ___ wait for their turn.", "options": ["should", "have to", "mustn’t", "should not to"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nMaría is talking about her experiences. Riding a horse is not part of her life.\nMaría says: “I ___ ever ridden a horse.”", "options": ["have never", "has never", "never have", "am never"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nYou are always tired because you sleep very late.\nYou ___ go to bed earlier.", "options": ["shouldn’t", "mustn’t", "should", "have to not"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nThe teacher says, “Don’t speak during the test.”\nStudents ___ speak during the test.", "options": ["should", "have to", "mustn’t", "should to"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nAt the airport, travelers show their boarding pass at the gate. It is part of the process.\nTravelers ___ show their boarding pass at the gate.", "options": ["should", "have to", "mustn’t", "has"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nAna is talking about her experiences. Traveling by train is not part of her life.\nAna says: “I ___ never ___ a train.”", "options": ["has / taken", "have / taken", "have / take", "has / take"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nYou have a terrible headache.\nYou ___ rest and drink water.", "options": ["should", "mustn’t", "have to", "shouldn’t"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nThe school rule says students cannot wear caps in class.\nStudents ___ wear caps in class.", "options": ["should", "mustn’t", "have to", "should wear not"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nMy friend is talking about his experiences with food. Indian food is new for him.\nHe says: “I ___ ever eaten Indian food.”", "options": ["have never", "has never", "am never", "do never"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nAt this gym, members wear sports shoes. It is a rule.\nMembers ___ wear sports shoes.", "options": ["should", "mustn’t", "have to", "shouldn’t"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nYour sister has an exam tomorrow, but she is watching TV for hours.\nShe ___ study more tonight.", "options": ["should", "mustn’t", "have to", "should nots"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nLucas is sharing his experiences. Acting in a school play is part of his life experience.\nHe says: “I ___ already ___ in a school play.”", "options": ["has / acted", "have / acted", "have / act", "has / act"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nThe sign near the animals says, “Do not feed them.”\nVisitors ___ feed the animals.", "options": ["should", "have to", "mustn’t", "should feed not"], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Fill in the gaps", "stem": "Read the situation and complete the sentence with the best option.**\nThe class starts at 7:00 a.m., and the gate closes at 6:55.\nStudents ___ arrive before 6:55.", "options": ["should", "have to", "shouldn’t", "mustn’t"], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I have a sore throat and a fever.\nB: ___", "options": ["You should see a doctor.", "You have to like hospitals.", "You mustn’t feel tired.", "You have visited a doctor."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I want to improve my English speaking. What do you recommend?\nB: ___", "options": ["You shouldn’t practice in class.", "You should speak more in class.", "You mustn’t listen to English.", "You have to forgetting mistakes."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Can I use my phone during the exam?\nB: ___", "options": ["Yes, students should use it.", "No, students have to use it outside.", "No, you mustn’t use it during the exam.", "No, you have visited the exam room."], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Why are you leaving so early this morning?\nB: ___", "options": ["Because I should at work at 8:00.", "Because I have to be at work at 8:00.", "Because I mustn’t at work at 8:00.", "Because I have been at work yesterday."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I’m really tired every morning. What should I do?\nB: ___", "options": ["You should go to bed earlier.", "You mustn’t sleep at night.", "You have to being tired.", "You have gone bed early."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I’ve never traveled by plane, so I feel nervous.\nB: ___", "options": ["You mustn’t at the airport.", "I have traveled by plane twice, so I can help you.", "You should never travel.", "I have to a passport yesterday."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: There is a sign here that says “No parking.” What does it mean?\nB: ___", "options": ["It means we should park here.", "It means we have to park here.", "It means we mustn’t park here.", "It means we have parked here."], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I have a big test tomorrow, but I haven’t studied much.\nB: ___", "options": ["You shouldn’t worry and never study.", "You should study tonight.", "You mustn’t open your book.", "You have to studied last night."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Why do all students wear uniforms here?\nB: ___", "options": ["Because they should wear them maybe.", "Because they have to wear them. It is the school rule.", "Because they mustn’t wear them.", "Because they have worn them yesterday."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I want to talk about experiences in my oral exam, but I don’t know what to say.\nB: ___", "options": ["You should use present perfect, like “I have visited…”", "You mustn’t speak in the oral exam.", "You have to never talk about your life.", "You should visited your teacher."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I have a bad toothache. What do you think?\nB: ___", "options": ["You should see a dentist.", "You mustn’t brush your teeth again.", "You have to candy every day.", "You have visited the dentist tomorrow."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Can we feed the monkeys in this park?\nB: ___", "options": ["Yes, we should feed them all.", "No, we mustn’t feed them. Look at the sign.", "Yes, we have to feed them.", "No, we have fed them tomorrow."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Why is Marta bringing her passport?\nB: ___", "options": ["Because she should show it at home.", "Because she has to show it at the airport.", "Because she mustn’t travel.", "Because she has showed it last week."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I want to write about a special experience in English class.\nB: ___", "options": ["You should use a sentence like “I have ridden a horse.”", "You mustn’t write about experiences.", "You have to writing in Spanish.", "You should wrote in present simple only."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I feel stressed all the time because of school.\nB: ___", "options": ["You should take some time to rest.", "You mustn’t sleep or relax.", "You have to being stressed.", "You have taken stress yesterday."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: The teacher is speaking right now. What should we do?\nB: ___", "options": ["We must be quiet.", "We should to leave now.", "We have to noisy.", "We have been quiet yesterday."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Why are those visitors waiting outside the office?\nB: ___", "options": ["Because they should waiting outside forever.", "Because visitors have to report to reception first.", "Because visitors mustn’t enter any building in life.", "Because they have reported tomorrow."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I need an example of present perfect for an experience.\nB: ___", "options": ["“I have visited Cartagena.”", "“I visit Cartagena yesterday.”", "“I should Cartagena.”", "“I have to Cartagena last year.”"], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: I eat a lot of candy every day, and now my tooth hurts.\nB: ___", "options": ["You shouldn’t eat so much candy.", "You have to eat more candy.", "You mustn’t visit the dentist.", "You have eaten should candy."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Conversations", "stem": "Read the conversation and choose the best response.**\nA: Can students run in the hall at school?\nB: ___", "options": ["Yes, they should run there.", "No, they mustn’t run in the hall.", "Yes, they have to run in the hall.", "No, they have ran in the hall."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA student wants advice because she is always late to class.", "options": ["Students have to bring their student card every day.", "I have never traveled by plane.", "You should wake up earlier.", "You mustn’t swim in this river."], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA sign says, “Do not swim in this river.”", "options": ["Students have to bring their student card every day.", "I have never traveled by plane.", "You should wake up earlier.", "You mustn’t swim in this river."], "answer": 3}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nAt this school, students bring their student card every day.", "options": ["Students have to bring their student card every day.", "I have never traveled by plane.", "You should wake up earlier.", "You mustn’t swim in this river."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA boy is talking about experiences. He wants to say that flying by plane is not part of his life.", "options": ["Students have to bring their student card every day.", "I have never traveled by plane.", "You should wake up earlier.", "You mustn’t swim in this river."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA teacher gives a direct instruction: “Finish the exercise now.”", "options": ["Passengers have to show their passport.", "I have visited San Andrés.", "You should eat healthier food.", "You must finish the exercise now."], "answer": 3}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA girl wants advice because she eats too much fast food.", "options": ["Passengers have to show their passport.", "I have visited San Andrés.", "You should eat healthier food.", "You must finish the exercise now."], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nAt the airport, passengers follow the official rule of showing a passport.", "options": ["Passengers have to show their passport.", "I have visited San Andrés.", "You should eat healthier food.", "You must finish the exercise now."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA student talks about an experience of visiting San Andrés.", "options": ["Passengers have to show their passport.", "I have visited San Andrés.", "You should eat healthier food.", "You must finish the exercise now."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA sign in the lab says, “Do not touch the chemicals.”", "options": ["Workers have to wear an ID card.", "You should sleep earlier.", "I have never eaten sushi before.", "You mustn’t touch the chemicals."], "answer": 3}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA student wants advice because he feels tired every day.", "options": ["Workers have to wear an ID card.", "You should sleep earlier.", "I have never eaten sushi before.", "You mustn’t touch the chemicals."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nAt the office, all workers wear an ID card. It is company policy.", "options": ["Workers have to wear an ID card.", "You should sleep earlier.", "I have never eaten sushi before.", "You mustn’t touch the chemicals."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA girl says this is her first time eating sushi.", "options": ["Workers have to wear an ID card.", "You should sleep earlier.", "I have never eaten sushi before.", "You mustn’t touch the chemicals."], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nThe coach gives an order during practice: “Run faster now!”", "options": ["I have gone camping once.", "You should rest and drink water.", "You must run faster now.", "You mustn’t talk loudly."], "answer": 2}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA boy asks for advice because he has a headache.", "options": ["I have gone camping once.", "You should rest and drink water.", "You must run faster now.", "You mustn’t talk loudly."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nAt the library, there is a rule: “No loud talking.”", "options": ["I have gone camping once.", "You should rest and drink water.", "You must run faster now.", "You mustn’t talk loudly."], "answer": 3}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA student talks about trying camping once in her life.", "options": ["I have gone camping once.", "You should rest and drink water.", "You must run faster now.", "You mustn’t talk loudly."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA school rule says students wear sports clothes on P.E. day.", "options": ["Students have to wear sports clothes on P.E. day.", "You should study more.", "I have met a famous athlete.", "You mustn’t use your phone here."], "answer": 0}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA student wants advice because he studies very little.", "options": ["Students have to wear sports clothes on P.E. day.", "You should study more.", "I have met a famous athlete.", "You mustn’t use your phone here."], "answer": 1}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA sign says, “Do not use your phone here.”", "options": ["Students have to wear sports clothes on P.E. day.", "You should study more.", "I have met a famous athlete.", "You mustn’t use your phone here."], "answer": 3}, {"type": "mcq", "level": "A2–A2+", "skill": "Matching (situations)", "stem": "Instruction: Match the situation with the best option.\nA girl talks about her experience of meeting a famous athlete.", "options": ["Students have to wear sports clothes on P.E. day.", "You should study more.", "I have met a famous athlete.", "You mustn’t use your phone here."], "answer": 2}]};
+
+const $ = (id)=>document.getElementById(id);
+const uiCode=$("uiCode"), uiStart=$("uiStart"), uiQuiz=$("uiQuiz"), uiResults=$("uiResults");
+const codeInput=$("codeInput"), btnUnlock=$("btnUnlock"), btnStart=$("btnStart");
+const timerPill=$("timerPill"), metaPill=$("metaPill"), qPill=$("qPill"), securityPill=$("securityPill");
+const qbox=$("qbox"), btnConfirm=$("btnConfirm"), btnNext=$("btnNext");
+const finalGrade=$("finalGrade"), finalMeta=$("finalMeta"), securityLog=$("securityLog");
+const lockscreen=$("lockscreen"), lockReason=$("lockReason"), resumeCodeInput=$("resumeCodeInput"), btnResume=$("btnResume");
+const btnRestart=$("btnRestart"), btnRestart2=$("btnRestart2");
+
+// Canvas decoration
+const cv=$("cv"), ctx=cv.getContext("2d");
+function fit(){
+  const r=cv.getBoundingClientRect();
+  const dpr=Math.max(1, window.devicePixelRatio||1);
+  cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+window.addEventListener("resize", fit);
+function draw(){
+  const w=cv.clientWidth, h=cv.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  ctx.globalAlpha=.14; ctx.strokeStyle="rgba(255,255,255,.14)";
+  const step=Math.max(22, Math.floor(Math.min(w,h)/18));
+  for(let x=0;x<w;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<h;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  ctx.globalAlpha=1;
+  const grad=ctx.createLinearGradient(0,0,w,0);
+  grad.addColorStop(0,"rgba(64,176,112,.22)");
+  grad.addColorStop(1,"rgba(240,144,16,.18)");
+  ctx.fillStyle=grad; ctx.fillRect(0,0,w,Math.max(54,h*0.08));
+  ctx.fillStyle="rgba(255,255,255,.75)";
+  ctx.font="800 14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("Secure Canvas Assessment", 16, 30);
+  ctx.fillStyle="rgba(255,255,255,.55)";
+  ctx.font="700 12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  ctx.fillText("Global timer: 80 minutes", 16, 48);
+}
+fit();
+
+// Helpers
+const ui={code:uiCode, start:uiStart, quiz:uiQuiz, results:uiResults};
+function show(k){ Object.values(ui).forEach(x=>x.classList.remove("active")); ui[k].classList.add("active"); }
+function pad2(n){ return n<10?("0"+n):(""+n); }
+function fmt(sec){ const m=Math.floor(sec/60), s=sec%60; return pad2(m)+":"+pad2(s); }
+function setTimer(sec){
+  const txt = (sec==null) ? "Total time: --:--" : ("Total time: "+fmt(sec));
+  timerPill.textContent = txt;
+  const inline=document.getElementById("totalTimerInline");
+  if(inline) inline.textContent = txt;
+}
+function setMeta(t){ metaPill.textContent=t; }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function esc(s){ return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+
+// State
+const S={phase:"code", sel:[], idx:0, ans:{}, lock:{}, shuf:{},
+         t:{id:null,left:0}, sec:{started:false,locked:false,inc:[],ignoreUntil:0},
+         score:{correct:0,wrong:0}, restartPending:false};
+
+function clearT(){ if(S.t.id){ clearInterval(S.t.id); S.t.id=null; } }
+function startGlobalT(){
+  clearT();
+  setTimer(S.t.left);
+  S.t.id=setInterval(()=>{
+    if(S.phase!=="quiz") return;
+    S.t.left = Math.max(0, S.t.left-1);
+    setTimer(S.t.left);
+    if(S.t.left===0){ finish(true); }
+  },1000);
+}
+
+function pick(){
+  const total=DATA.bank.length, needed=DATA.sample_size||25;
+  const idxs=Array.from({length:total},(_,i)=>i);
+  S.sel=shuffle(idxs).slice(0, needed);
+  S.idx=0; S.ans={}; S.lock={}; S.shuf={}; S.score={correct:0,wrong:0};
+  for(const gi of S.sel){
+    const qq=DATA.bank[gi];
+    const perm=shuffle(qq.options.map((_,i)=>i));
+    const newOpts=perm.map(i=>qq.options[i]);
+    const newCorrect=perm.indexOf(Number(qq.answer));
+    S.shuf[String(gi)]={options:newOpts, answer:newCorrect};
+  }
+}
+
+function qNow(){
+  const gi=S.sel[S.idx];
+  const qq=DATA.bank[gi];
+  const sh=S.shuf[String(gi)];
+  return Object.assign({}, qq, {options: sh.options, answer: sh.answer});
+}
+
+function updateBadges(ok){
+  const badge=document.getElementById("badgeResult");
+  const count=document.getElementById("badgeCount");
+  if(badge){ badge.className = ok ? "badgeOk" : "badgeBad"; badge.textContent = ok ? "Correct" : "Incorrect"; }
+  if(count){ count.textContent = "Correct: "+S.score.correct+" • Incorrect: "+S.score.wrong; }
+}
+
+function render(){
+  const qq=qNow();
+  const key="q"+S.idx;
+  const locked=!!S.lock[key];
+  const saved=S.ans[key];
+
+  btnConfirm.disabled = locked;
+  qPill.textContent = "Q "+(S.idx+1)+" / "+S.sel.length+" • "+qq.skill;
+
+  qbox.innerHTML="";
+  qbox.insertAdjacentHTML("beforeend", '<p class="qTitle">'+esc(qq.stem)+'</p>');
+  qbox.insertAdjacentHTML("beforeend", '<div class="inlineTimer" id="totalTimerInline">Total time: --:--</div>');
+  setTimer(S.t.left);
+
+  const group="g_"+key;
+  const chosen=(saved!==undefined && saved!=="__FORCED_WRONG__") ? Number(saved) : null;
+
+  qq.options.forEach((opt,i)=>{
+    const row=document.createElement("label");
+    let extra="";
+    if(locked){
+        if(chosen===i && i===Number(qq.answer)) extra+=" correct";
+        if(chosen===i && i!==Number(qq.answer)) extra+=" wrong";
+      }
+    row.className="opt"+(locked?" locked":"")+extra;
+
+    const r=document.createElement("input");
+    r.type="radio"; r.name=group; r.value=String(i); r.disabled=locked;
+    if(chosen!==null && chosen===i) r.checked=true;
+
+    const span=document.createElement("div");
+    span.innerHTML="<b>"+String.fromCharCode(65+i)+"</b>. "+esc(opt);
+
+    row.appendChild(r); row.appendChild(span);
+    row.addEventListener("click", ()=>{ if(S.lock[key]) return; r.checked=true; S.ans[key]=String(i); });
+    qbox.appendChild(row);
+  });
+
+  qbox.insertAdjacentHTML("beforeend",
+    '<div class="feedbackRow">'+
+      '<span class="badgeNeutral" id="badgeResult">Result: —</span>'+
+      '<span class="badgeNeutral" id="badgeCount">Correct: '+S.score.correct+' • Incorrect: '+S.score.wrong+'</span>'+
+    '</div>');
+}
+
+function confirm(){
+  const qq=qNow();
+  const key="q"+S.idx;
+  if(S.lock[key]) return;
+  if(S.ans[key]===undefined){ alert("Choose an answer first."); return; }
+  const chosen=Number(S.ans[key]);
+  const ok=(chosen===Number(qq.answer));
+  S.lock[key]=true;
+  if(ok) S.score.correct++; else S.score.wrong++;
+  render(); updateBadges(ok); setMeta("Saved Q"+(S.idx+1));
+}
+
+function forceWrong(){
+  const key="q"+S.idx;
+  if(S.lock[key]) return;
+  S.lock[key]=true;
+  S.ans[key]="__FORCED_WRONG__";
+  S.score.wrong++;
+}
+
+function nextQ(){ if(S.idx < S.sel.length-1){ S.idx++; render(); setMeta("In progress"); } else finish(false); }
+
+function grade(){
+  let correct=0, total=S.sel.length;
+  for(let i=0;i<total;i++){
+    const gi=S.sel[i], sh=S.shuf[String(gi)], a=S.ans["q"+i];
+    if(a===undefined || a==="__FORCED_WRONG__") continue;
+    if(Number(a)===Number(sh.answer)) correct++;
+  }
+  const pct = total ? (correct/total) : 0;
+  const g = 1 + 4*pct;
+  return {correct,total,pct,grade:Math.round(g*10)/10};
+}
+
+function finish(timeUp){
+  clearT();
+  const r=grade();
+  finalGrade.textContent=r.grade.toFixed(1)+" / 5.0";
+  finalMeta.textContent="Correct: "+r.correct+" / "+r.total+" • Accuracy: "+Math.round(r.pct*100)+"%"+(timeUp?" • Time up":"");
+  securityLog.textContent=S.sec.inc.length ? S.sec.inc.join("\n") : "No incidents.";
+  S.phase="results"; show("results"); setMeta("Done");
+}
+
+// Security
+function shouldTrip(){ return S.sec.started && S.phase==="quiz" && !S.sec.locked && Date.now()>=S.sec.ignoreUntil; }
+function logInc(msg){ const t=new Date().toLocaleString(); S.sec.inc.push("["+t+"] "+msg); securityPill.textContent="Security: INCIDENT"; }
+function lock(reason){
+  if(!shouldTrip()) return;
+  S.sec.locked=true;
+  logInc("LOCK: "+reason);
+  forceWrong();
+  lockReason.textContent = reason + " (Question counted as wrong.)";
+  resumeCodeInput.value="";
+  lockscreen.classList.add("active");
+}
+function unlock(){
+  const code=resumeCodeInput.value.trim();
+  if(code!==DATA.access_code){ alert("Incorrect code."); resumeCodeInput.value=""; return; }
+  resumeCodeInput.value="";
+  lockscreen.classList.remove("active");
+  // If user is requesting a restart from Results, only allow after correct code
+  if(S.restartPending){
+    S.restartPending=false;
+    resetToStart();
+    return;
+  }
+  S.sec.locked=false;
+  S.sec.ignoreUntil=Date.now()+1200;
+  nextQ();
+}
+document.addEventListener("visibilitychange", ()=>{ if(!shouldTrip()) return; if(document.hidden) lock("Tab/window was sent to background."); });
+window.addEventListener("blur", ()=>{ if(!shouldTrip()) return; lock("Window lost focus."); });
+window.addEventListener("pagehide", ()=>{ if(!shouldTrip()) return; lock("Page was hidden (pagehide)."); });
+window.addEventListener("focusout", ()=>{ if(!shouldTrip()) return; if(!document.hasFocus()) lock("Focus moved away from the page."); });
+setInterval(()=>{ if(!shouldTrip()) return; if(document.hidden || !document.hasFocus()) lock("Focus/visibility check failed."); }, 250);
+
+// shortcuts
+document.addEventListener("keydown", (e)=>{
+  if(S.phase!=="quiz") return;
+  const k=(e.key||"").toLowerCase();
+  const ctrl=e.ctrlKey || e.metaKey;
+  const blocked =
+    (ctrl && ["c","v","x","p","s","u","r","w","t","n"].includes(k)) ||
+    (e.key==="F12") ||
+    (ctrl && e.shiftKey && ["i","j","c"].includes(k)) ||
+    (e.key==="PrintScreen") ||
+    (ctrl && e.shiftKey && k==="s") ||
+    (e.metaKey && e.shiftKey && ["3","4","5"].includes(k));
+  if(blocked){ e.preventDefault(); lock("Blocked shortcut / capture attempt detected."); }
+});
+document.addEventListener("contextmenu", (e)=>{ if(S.phase==="quiz") e.preventDefault(); });
+document.addEventListener("copy", (e)=>{ if(S.phase==="quiz") e.preventDefault(); });
+document.addEventListener("cut", (e)=>{ if(S.phase==="quiz") e.preventDefault(); });
+document.addEventListener("paste", (e)=>{ if(S.phase==="quiz") e.preventDefault(); });
+
+// Flow
+function resetToStart(){
+  // Fresh attempt, but go directly to the Start screen (code already confirmed)
+  clearT();
+  S.phase='start';
+  S.sec.started=false; S.sec.locked=false; S.sec.inc=[]; S.sec.ignoreUntil=0;
+  S.sel=[]; S.idx=0; S.ans={}; S.lock={}; S.shuf={}; S.score={correct:0,wrong:0};
+  S.t.left = DATA.total_seconds || 4800;
+  setTimer(S.t.left);
+  codeInput.value=''; resumeCodeInput.value='';
+  securityPill.textContent='Security: OK';
+  setMeta('Ready');
+  lockscreen.classList.remove('active');
+  show('start');
+}
+
+function resetAll(){
+  clearT();
+  S.phase="code";
+  S.sec.started=false; S.sec.locked=false; S.sec.inc=[]; S.sec.ignoreUntil=0;
+  S.sel=[]; S.idx=0; S.ans={}; S.lock={}; S.shuf={}; S.score={correct:0,wrong:0};
+  S.t.left = DATA.total_seconds || 3600;
+  setTimer(S.t.left);
+  codeInput.value=""; resumeCodeInput.value="";
+  securityPill.textContent="Security: OK";
+  setMeta("Not started");
+  lockscreen.classList.remove("active");
+  show("code");
+  setTimeout(()=>{ try{ codeInput.focus(); }catch(e){} },120);
+}
+
+function unlockStart(){
+  const code=codeInput.value.trim();
+  if(code!==DATA.access_code){ alert("Incorrect code."); codeInput.value=""; codeInput.focus(); return; }
+  codeInput.value="";
+  show("start");
+  setMeta("Ready");
+}
+
+function startExam(){
+  S.sec.started=true;
+  pick();
+  S.phase="quiz";
+  show("quiz");
+  setMeta("25 random / 80");
+  render();
+  startGlobalT();
+}
+
+btnUnlock.addEventListener("click", (e)=>{ e.preventDefault(); unlockStart(); });
+codeInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.keyCode===13){ e.preventDefault(); unlockStart(); }});
+btnStart.addEventListener("click", (e)=>{ e.preventDefault(); startExam(); });
+btnConfirm.addEventListener("click", (e)=>{ e.preventDefault(); confirm(); });
+btnNext.addEventListener("click", (e)=>{ e.preventDefault(); nextQ(); });
+btnResume.addEventListener("click", (e)=>{ e.preventDefault(); unlock(); });
+resumeCodeInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.keyCode===13){ e.preventDefault(); unlock(); }});
+btnRestart.addEventListener("click", (e)=>{
+  e.preventDefault();
+  // Keep results visible. Require access code to restart.
+  S.restartPending=true;
+  lockReason.textContent="Enter the access code to restart the quiz.";
+  resumeCodeInput.value="";
+  lockscreen.classList.add("active");
+  setTimeout(()=>{ try{ resumeCodeInput.focus(); }catch(_){} },120);
+});
+btnRestart2.addEventListener("click", (e)=>{
+  e.preventDefault();
+  // If restart was requested from Results, just cancel.
+  if(S.restartPending){
+    S.restartPending=false;
+    lockscreen.classList.remove("active");
+    return;
+  }
+  resetAll();
+});
+
+resetAll();
+</script>
+</body>
+</html>
